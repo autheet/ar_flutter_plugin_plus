@@ -5,7 +5,7 @@ import 'dart:async';
 import 'package:flutter/services.dart';
 
 class ArFlutterPluginPlus {
-  static const MethodChannel _channel = const MethodChannel(
+  static const MethodChannel _channel = MethodChannel(
     'ar_flutter_plugin_plus',
   );
 

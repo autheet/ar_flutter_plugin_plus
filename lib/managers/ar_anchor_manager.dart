@@ -32,7 +32,7 @@ class ARAnchorManager {
   }
 
   /// Activates collaborative AR mode (using Google Cloud Anchors)
-  initGoogleCloudAnchorMode() async {
+  Future<void> initGoogleCloudAnchorMode() async {
     _channel.invokeMethod<bool>('initGoogleCloudAnchorMode', {});
   }
 
@@ -76,7 +76,7 @@ class ARAnchorManager {
           }
       }
     } catch (e) {
-      print('Error caught: ' + e.toString());
+      print('Error caught: $e');
     }
     return Future.value();
   }
@@ -91,7 +91,7 @@ class ARAnchorManager {
   }
 
   /// Remove given anchor and all its children from the AR Scene
-  removeAnchor(ARAnchor anchor) {
+  void removeAnchor(ARAnchor anchor) {
     _channel.invokeMethod<String>('removeAnchor', {'name': anchor.name});
   }
 
@@ -109,7 +109,7 @@ class ARAnchorManager {
 
   /// Try to download anchor with the given ID from the Google Cloud Anchor API and add it to the scene
   Future<bool?> downloadAnchor(String cloudanchorid) async {
-    print("TRYING TO DOWNLOAD ANCHOR WITH ID " + cloudanchorid);
+    print("TRYING TO DOWNLOAD ANCHOR WITH ID $cloudanchorid");
     _channel
         .invokeMethod<bool>('downloadAnchor', {"cloudanchorid": cloudanchorid});
     return null;

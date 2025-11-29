@@ -14,7 +14,7 @@ import 'package:ar_flutter_plugin_plus/models/ar_hittest_result.dart';
 import 'package:vector_math/vector_math_64.dart';
 
 class ScreenshotWidget extends StatefulWidget {
-  const ScreenshotWidget({Key? key}) : super(key: key);
+  const ScreenshotWidget({super.key});
   @override
   _ScreenshotWidgetState createState() => _ScreenshotWidgetState();
 }
@@ -93,7 +93,6 @@ class _ScreenshotWidgetState extends State<ScreenshotWidget> {
     for (var anchor in anchors) {
       arAnchorManager!.removeAnchor(anchor);
     }
-    ;
     anchors = [];
   }
 

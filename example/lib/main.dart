@@ -13,10 +13,12 @@ import 'package:ar_flutter_plugin_plus_example/examples/debugoptionsexample.dart
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
-  runApp(MyApp());
+  runApp(const MyApp());
 }
 
 class MyApp extends StatefulWidget {
+  const MyApp({super.key});
+
   @override
   _MyAppState createState() => _MyAppState();
 }
@@ -60,7 +62,7 @@ class _MyAppState extends State<MyApp> {
         ),
         body: Column(children: [
           Text('Running on: $_platformVersion\n'),
-          Expanded(
+          const Expanded(
             child: SafeArea(
               child: ExampleList(),
             ),
@@ -72,7 +74,7 @@ class _MyAppState extends State<MyApp> {
 }
 
 class ExampleList extends StatelessWidget {
-  ExampleList({Key? key}) : super(key: key);
+  const ExampleList({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -81,48 +83,48 @@ class ExampleList extends StatelessWidget {
           'Debug Options',
           'Visualize feature points, planes and world coordinate system',
           () => Navigator.push(context,
-              MaterialPageRoute(builder: (context) => DebugOptionsWidget()))),
+              MaterialPageRoute(builder: (context) => const DebugOptionsWidget()))),
       Example(
           'Local & Online Objects',
           'Place 3D objects from Flutter assets and the web into the scene',
           () => Navigator.push(
               context,
               MaterialPageRoute(
-                  builder: (context) => LocalAndWebObjectsWidget()))),
+                  builder: (context) => const LocalAndWebObjectsWidget()))),
       Example(
           'Anchors & Objects on Planes',
           'Place 3D objects on detected planes using anchors',
           () => Navigator.push(
               context,
               MaterialPageRoute(
-                  builder: (context) => ObjectsOnPlanesWidget()))),
+                  builder: (context) => const ObjectsOnPlanesWidget()))),
       Example(
           'Object Transformation Gestures',
           'Rotate and Pan Objects',
           () => Navigator.push(context,
-              MaterialPageRoute(builder: (context) => ObjectGesturesWidget()))),
+              MaterialPageRoute(builder: (context) => const ObjectGesturesWidget()))),
       Example(
           'Screenshots',
           'Place 3D objects on planes and take screenshots',
           () => Navigator.push(context,
-              MaterialPageRoute(builder: (context) => ScreenshotWidget()))),
+              MaterialPageRoute(builder: (context) => const ScreenshotWidget()))),
       Example(
           'Cloud Anchors',
           'Place and retrieve 3D objects using the Google Cloud Anchor API',
           () => Navigator.push(context,
-              MaterialPageRoute(builder: (context) => CloudAnchorWidget()))),
+              MaterialPageRoute(builder: (context) => const CloudAnchorWidget()))),
       Example(
           'External Model Management',
           'Similar to Cloud Anchors example, but uses external database to choose from available 3D models',
           () => Navigator.push(
               context,
               MaterialPageRoute(
-                  builder: (context) => ExternalModelManagementWidget()))),
+                  builder: (context) => const ExternalModelManagementWidget()))),
       Example(
           'Image Marker Tracking',
           'Place 3D objects on image markers',
           () => Navigator.push(context,
-              MaterialPageRoute(builder: (context) => ImageMarkerTracking()))),
+              MaterialPageRoute(builder: (context) => const ImageMarkerTracking()))),
     ];
     return ListView(
       children:
@@ -132,7 +134,7 @@ class ExampleList extends StatelessWidget {
 }
 
 class ExampleCard extends StatelessWidget {
-  ExampleCard({Key? key, required this.example}) : super(key: key);
+  const ExampleCard({super.key, required this.example});
   final Example example;
 
   @override
