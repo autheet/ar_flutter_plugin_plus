@@ -77,7 +77,6 @@ internal class AndroidARView(
     private var showAnimatedGuide = false
     private lateinit var animatedGuide: View
     private var pointCloudNode = Node()
-    private var pointCloudNode = Node()
     private var worldOriginNode = Node()
     // Setting defaults
     private var enableRotation = false
@@ -119,7 +118,7 @@ internal class AndroidARView(
                                 result.error("Error", "could not get camera pose", null)
                             }
                             }
-                        }
+
                         "checkVPSAvailability" -> {
                             val latitude = call.argument<Double>("latitude")
                             val longitude = call.argument<Double>("longitude")
@@ -261,11 +260,16 @@ internal class AndroidARView(
                             val altitude = call.argument<Double>("altitude")
                             val earth = arSceneView.session?.earth
                             if (earth != null && latitude != null && longitude != null && altitude != null) {
-                                val anchor = earth.resolveAnchorOnTerrain(latitude, longitude, altitude, 0.0f, 0.0f, 0.0f, 0.0f)
-                                val anchorNode = AnchorNode(anchor)
-                                anchorNode.name = "terrainAnchor_" + System.currentTimeMillis()
-                                anchorNode.setParent(arSceneView.scene)
-                                result.success(true)
+                                earth.resolveAnchorOnTerrainAsync(latitude, longitude, altitude, 0.0f, 0.0f, 0.0f, 1.0f) { anchor, state ->
+                                    if (state == Anchor.TerrainAnchorState.SUCCESS) {
+                                        val anchorNode = AnchorNode(anchor)
+                                        anchorNode.name = "terrainAnchor_" + System.currentTimeMillis()
+                                        anchorNode.setParent(arSceneView.scene)
+                                        result.success(true)
+                                    } else {
+                                        result.success(false)
+                                    }
+                                }
                             } else {
                                 result.success(false)
                             }
@@ -276,11 +280,16 @@ internal class AndroidARView(
                             val altitude = call.argument<Double>("altitude")
                             val earth = arSceneView.session?.earth
                             if (earth != null && latitude != null && longitude != null && altitude != null) {
-                                val anchor = earth.resolveAnchorOnRooftop(latitude, longitude, altitude, 0.0f, 0.0f, 0.0f, 0.0f)
-                                val anchorNode = AnchorNode(anchor)
-                                anchorNode.name = "rooftopAnchor_" + System.currentTimeMillis()
-                                anchorNode.setParent(arSceneView.scene)
-                                result.success(true)
+                                earth.resolveAnchorOnRooftopAsync(latitude, longitude, altitude, 0.0f, 0.0f, 0.0f, 1.0f) { anchor, state ->
+                                    if (state == Anchor.RooftopAnchorState.SUCCESS) {
+                                        val anchorNode = AnchorNode(anchor)
+                                        anchorNode.name = "rooftopAnchor_" + System.currentTimeMillis()
+                                        anchorNode.setParent(arSceneView.scene)
+                                        result.success(true)
+                                    } else {
+                                        result.success(false)
+                                    }
+                                }
                             } else {
                                 result.success(false)
                             }
