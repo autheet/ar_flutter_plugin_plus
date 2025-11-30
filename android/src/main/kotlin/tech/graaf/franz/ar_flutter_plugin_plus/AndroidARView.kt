@@ -77,12 +77,15 @@ internal class AndroidARView(
     private var showAnimatedGuide = false
     private lateinit var animatedGuide: View
     private var pointCloudNode = Node()
+    private var pointCloudNode = Node()
     private var worldOriginNode = Node()
     // Setting defaults
     private var enableRotation = false
     private var enablePans = false
     private var keepNodeSelected = true;
     private var footprintSelectionVisualizer = FootprintSelectionVisualizer()
+    // Geospatial
+    private var geospatialMode = false
     // Model builder
     private var modelBuilder = ArModelBuilder()
     // Cloud anchor handler
@@ -114,6 +117,18 @@ internal class AndroidARView(
                                 result.success(serializePose(cameraPose!!))
                             } else {
                                 result.error("Error", "could not get camera pose", null)
+                            }
+                            }
+                        }
+                        "checkVPSAvailability" -> {
+                            val latitude = call.argument<Double>("latitude")
+                            val longitude = call.argument<Double>("longitude")
+                            if (latitude != null && longitude != null && arSceneView.session != null) {
+                                val availabilityFuture = arSceneView.session!!.checkVpsAvailabilityAsync(latitude, longitude) { availability ->
+                                    result.success(availability.toString())
+                                }
+                            } else {
+                                result.error("Error", "Session is null or invalid coordinates", null)
                             }
                         }
                         "snapshot" -> {
@@ -236,6 +251,36 @@ internal class AndroidARView(
                                     }
                                     else -> result.success(false)
                                 }
+                            } else {
+                                result.success(false)
+                            }
+                        }
+                        "addTerrainAnchor" -> {
+                            val latitude = call.argument<Double>("latitude")
+                            val longitude = call.argument<Double>("longitude")
+                            val altitude = call.argument<Double>("altitude")
+                            val earth = arSceneView.session?.earth
+                            if (earth != null && latitude != null && longitude != null && altitude != null) {
+                                val anchor = earth.resolveAnchorOnTerrain(latitude, longitude, altitude, 0.0f, 0.0f, 0.0f, 0.0f)
+                                val anchorNode = AnchorNode(anchor)
+                                anchorNode.name = "terrainAnchor_" + System.currentTimeMillis()
+                                anchorNode.setParent(arSceneView.scene)
+                                result.success(true)
+                            } else {
+                                result.success(false)
+                            }
+                        }
+                        "addRooftopAnchor" -> {
+                            val latitude = call.argument<Double>("latitude")
+                            val longitude = call.argument<Double>("longitude")
+                            val altitude = call.argument<Double>("altitude")
+                            val earth = arSceneView.session?.earth
+                            if (earth != null && latitude != null && longitude != null && altitude != null) {
+                                val anchor = earth.resolveAnchorOnRooftop(latitude, longitude, altitude, 0.0f, 0.0f, 0.0f, 0.0f)
+                                val anchorNode = AnchorNode(anchor)
+                                anchorNode.name = "rooftopAnchor_" + System.currentTimeMillis()
+                                anchorNode.setParent(arSceneView.scene)
+                                result.success(true)
                             } else {
                                 result.success(false)
                             }
@@ -399,6 +444,9 @@ internal class AndroidARView(
                     val config = Config(session)
                     config.updateMode = Config.UpdateMode.LATEST_CAMERA_IMAGE
                     config.focusMode = Config.FocusMode.AUTO
+                    if (geospatialMode) {
+                        config.geospatialMode = Config.GeospatialMode.ENABLED
+                    }
                     session.configure(config)
                     arSceneView.setupSession(session)
                 }
@@ -476,6 +524,11 @@ internal class AndroidARView(
         val argHandlePans: Boolean? = call.argument<Boolean>("handlePans")
         val argShowAnimatedGuide: Boolean? = call.argument<Boolean>("showAnimatedGuide")
         val argTrackingImagePaths: List<String>? = call.argument<List<String>>("trackingImagePaths")
+        val argGeospatialMode: Boolean? = call.argument<Boolean>("geospatialMode")
+
+        if (argGeospatialMode == true) {
+            geospatialMode = true
+        }
 
 
         sceneUpdateListener = com.google.ar.sceneform.Scene.OnUpdateListener {
@@ -652,6 +705,33 @@ internal class AndroidARView(
         val updatedAnchors = arSceneView.arFrame!!.updatedAnchors
         // Notify the cloudManager of all the updates.
         if (this::cloudAnchorHandler.isInitialized) {cloudAnchorHandler.onUpdate(updatedAnchors)}
+
+        // Geospatial updates
+        if (geospatialMode && arSceneView.session != null) {
+            val earth = arSceneView.session!!.earth
+            if (earth != null) {
+                val earthState = earth.earthState.toString()
+                val trackingState = earth.trackingState.toString()
+                val pose = earth.cameraGeospatialPose
+                val poseMap = HashMap<String, Any>()
+                if (pose != null) {
+                    poseMap["latitude"] = pose.latitude
+                    poseMap["longitude"] = pose.longitude
+                    poseMap["altitude"] = pose.altitude
+                    poseMap["heading"] = pose.heading
+                    poseMap["horizontalAccuracy"] = pose.horizontalAccuracy
+                    poseMap["verticalAccuracy"] = pose.verticalAccuracy
+                    poseMap["headingAccuracy"] = pose.headingAccuracy
+                }
+                val args = HashMap<String, Any>()
+                args["earthState"] = earthState
+                args["trackingState"] = trackingState
+                args["pose"] = poseMap
+                activity.runOnUiThread {
+                    sessionManagerChannel.invokeMethod("onGeospatialStateUpdated", args)
+                }
+            }
+        }
 
         // Check for image tracking
         checkForTrackedImages()

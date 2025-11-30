@@ -11,6 +11,8 @@ import 'package:vector_math/vector_math_64.dart';
 typedef ARHitResultHandler = void Function(List<ARHitTestResult> hits);
 typedef ARImageDetectionResultHandler = void Function(
     String imageName, Matrix4 transformation);
+typedef ARGeospatialStateUpdatedHandler = void Function(
+    String earthState, String trackingState, Map<String, dynamic> pose);
 
 /// Manages the session configuration, parameters and events of an [ARView]
 class ARSessionManager {
@@ -31,6 +33,9 @@ class ARSessionManager {
 
   /// Receives detection results when tracked images are detected
   ARImageDetectionResultHandler? onImageDetected;
+
+  /// Receives geospatial state updates
+  ARGeospatialStateUpdatedHandler? onGeospatialStateUpdated;
 
   ARSessionManager(int id, this.buildContext, this.planeDetectionConfig,
       {this.debug = false}) {
@@ -97,6 +102,23 @@ class ARSessionManager {
     }
   }
 
+  /// Checks the availability of the Visual Positioning System (VPS) at the given location.
+  /// Returns a [Future] that completes with the availability status (e.g., "AVAILABLE", "UNAVAILABLE", "ERROR").
+  Future<String?> checkVPSAvailability(
+      double latitude, double longitude) async {
+    try {
+      final availability =
+          await _channel.invokeMethod<String>('checkVPSAvailability', {
+        'latitude': latitude,
+        'longitude': longitude,
+      });
+      return availability;
+    } catch (e) {
+      print('Error checking VPS availability: $e');
+      return "ERROR";
+    }
+  }
+
   /// Returns the distance in meters between @vector1 and @vector2.
   double getDistanceBetweenVectors(Vector3 vector1, Vector3 vector2) {
     num dx = vector1.x - vector2.x;
@@ -133,6 +155,15 @@ class ARSessionManager {
             final transformation = const MatrixConverter()
                 .fromJson(arguments['transformation'] as List<dynamic>);
             onImageDetected!(imageName, transformation);
+          }
+          break;
+        case 'onGeospatialStateUpdated':
+          if (onGeospatialStateUpdated != null) {
+            final arguments = call.arguments as Map<dynamic, dynamic>;
+            final earthState = arguments['earthState'] as String;
+            final trackingState = arguments['trackingState'] as String;
+            final pose = Map<String, dynamic>.from(arguments['pose'] as Map);
+            onGeospatialStateUpdated!(earthState, trackingState, pose);
           }
           break;
         case 'dispose':

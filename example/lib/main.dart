@@ -10,6 +10,7 @@ import 'package:ar_flutter_plugin_plus/ar_flutter_plugin_plus.dart';
 import 'package:ar_flutter_plugin_plus_example/examples/cloudanchorexample.dart';
 import 'package:ar_flutter_plugin_plus_example/examples/localandwebobjectsexample.dart';
 import 'package:ar_flutter_plugin_plus_example/examples/debugoptionsexample.dart';
+import 'package:ar_flutter_plugin_plus_example/examples/geospatialexample.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -82,8 +83,10 @@ class ExampleList extends StatelessWidget {
       Example(
           'Debug Options',
           'Visualize feature points, planes and world coordinate system',
-          () => Navigator.push(context,
-              MaterialPageRoute(builder: (context) => const DebugOptionsWidget()))),
+          () => Navigator.push(
+              context,
+              MaterialPageRoute(
+                  builder: (context) => const DebugOptionsWidget()))),
       Example(
           'Local & Online Objects',
           'Place 3D objects from Flutter assets and the web into the scene',
@@ -101,8 +104,10 @@ class ExampleList extends StatelessWidget {
       Example(
           'Object Transformation Gestures',
           'Rotate and Pan Objects',
-          () => Navigator.push(context,
-              MaterialPageRoute(builder: (context) => const ObjectGesturesWidget()))),
+          () => Navigator.push(
+              context,
+              MaterialPageRoute(
+                  builder: (context) => const ObjectGesturesWidget()))),
       Example(
           'Screenshots',
           'Place 3D objects on planes and take screenshots',
@@ -119,12 +124,18 @@ class ExampleList extends StatelessWidget {
           () => Navigator.push(
               context,
               MaterialPageRoute(
-                  builder: (context) => const ExternalModelManagementWidget()))),
+                  builder: (context) =>
+                      const ExternalModelManagementWidget()))),
       Example(
           'Image Marker Tracking',
           'Place 3D objects on image markers',
           () => Navigator.push(context,
               MaterialPageRoute(builder: (context) => const ImageMarkerTracking()))),
+      Example(
+          'Geospatial API',
+          'Check VPS availability and place geospatial anchors',
+          () => Navigator.push(context,
+              MaterialPageRoute(builder: (context) => const GeospatialExampleWidget()))),
     ];
     return ListView(
       children:
