@@ -30,18 +30,20 @@ abstract class PlatformARView {
   Widget build(
       {@required BuildContext context,
       @required ARViewCreatedCallback arViewCreatedCallback,
-      @required PlaneDetectionConfig planeDetectionConfig});
+      @required PlaneDetectionConfig planeDetectionConfig,
+      @required bool geospatialMode});
 
   /// Callback function that is executed once the view is established
   void onPlatformViewCreated(int id);
 }
 
 /// Instantiates [ARSessionManager], [ARObjectManager] and returns them to the widget instantiating the [ARView] using the [arViewCreatedCallback]
-createManagers(
+void createManagers(
     int id,
     BuildContext? context,
     ARViewCreatedCallback? arViewCreatedCallback,
-    PlaneDetectionConfig? planeDetectionConfig) {
+    PlaneDetectionConfig? planeDetectionConfig,
+    bool? geospatialMode) {
   if (context == null ||
       arViewCreatedCallback == null ||
       planeDetectionConfig == null) {
@@ -57,25 +59,31 @@ class AndroidARView implements PlatformARView {
   late BuildContext? _context;
   late ARViewCreatedCallback? _arViewCreatedCallback;
   late PlaneDetectionConfig? _planeDetectionConfig;
+  late bool? _geospatialMode;
 
   @override
   void onPlatformViewCreated(int id) {
     print("Android platform view created!");
-    createManagers(id, _context, _arViewCreatedCallback, _planeDetectionConfig);
+    createManagers(id, _context, _arViewCreatedCallback, _planeDetectionConfig,
+        _geospatialMode);
   }
 
   @override
   Widget build(
       {BuildContext? context,
       ARViewCreatedCallback? arViewCreatedCallback,
-      PlaneDetectionConfig? planeDetectionConfig}) {
+      PlaneDetectionConfig? planeDetectionConfig,
+      bool? geospatialMode}) {
     _context = context;
     _arViewCreatedCallback = arViewCreatedCallback;
     _planeDetectionConfig = planeDetectionConfig;
+    _geospatialMode = geospatialMode;
     // This is used in the platform side to register the view.
     final String viewType = 'ar_flutter_plugin_plus';
     // Pass parameters to the platform side.
-    final Map<String, dynamic> creationParams = <String, dynamic>{};
+    final Map<String, dynamic> creationParams = <String, dynamic>{
+      'geospatialMode': geospatialMode
+    };
 
     return AndroidView(
       viewType: viewType,
@@ -92,25 +100,31 @@ class IosARView implements PlatformARView {
   BuildContext? _context;
   ARViewCreatedCallback? _arViewCreatedCallback;
   PlaneDetectionConfig? _planeDetectionConfig;
+  bool? _geospatialMode;
 
   @override
   void onPlatformViewCreated(int id) {
     print("iOS platform view created!");
-    createManagers(id, _context, _arViewCreatedCallback, _planeDetectionConfig);
+    createManagers(id, _context, _arViewCreatedCallback, _planeDetectionConfig,
+        _geospatialMode);
   }
 
   @override
   Widget build(
       {BuildContext? context,
       ARViewCreatedCallback? arViewCreatedCallback,
-      PlaneDetectionConfig? planeDetectionConfig}) {
+      PlaneDetectionConfig? planeDetectionConfig,
+      bool? geospatialMode}) {
     _context = context;
     _arViewCreatedCallback = arViewCreatedCallback;
     _planeDetectionConfig = planeDetectionConfig;
+    _geospatialMode = geospatialMode;
     // This is used in the platform side to register the view.
     final String viewType = 'ar_flutter_plugin_plus';
     // Pass parameters to the platform side.
-    final Map<String, dynamic> creationParams = <String, dynamic>{};
+    final Map<String, dynamic> creationParams = <String, dynamic>{
+      'geospatialMode': geospatialMode
+    };
 
     return UiKitView(
       viewType: viewType,
@@ -139,27 +153,29 @@ class ARView extends StatefulWidget {
   /// Configures the type of planes ARCore and ARKit should track. defaults to none
   final PlaneDetectionConfig planeDetectionConfig;
 
+  /// Configures the Geospatial mode for ARCore and ARKit. defaults to disabled
+  final bool geospatialMode;
+
   /// Configures whether or not to display the device's platform type above the AR view. Defaults to false
   final bool showPlatformType;
 
-  ARView(
-      {Key? key,
+  const ARView(
+      {super.key,
       required this.onARViewCreated,
       this.planeDetectionConfig = PlaneDetectionConfig.none,
+      this.geospatialMode = false,
       this.showPlatformType = false,
       this.permissionPromptDescription =
           "Camera permission must be given to the app for AR functions to work",
       this.permissionPromptButtonText = "Grant Permission",
       this.permissionPromptParentalRestriction =
-          "Camera permission is restriced by the OS, please check parental control settings"})
-      : super(key: key);
+          "Camera permission is restriced by the OS, please check parental control settings"});
   @override
   _ARViewState createState() => _ARViewState(
-      showPlatformType: this.showPlatformType,
-      permissionPromptDescription: this.permissionPromptDescription,
-      permissionPromptButtonText: this.permissionPromptButtonText,
-      permissionPromptParentalRestriction:
-          this.permissionPromptParentalRestriction);
+      showPlatformType: showPlatformType,
+      permissionPromptDescription: permissionPromptDescription,
+      permissionPromptButtonText: permissionPromptButtonText,
+      permissionPromptParentalRestriction: permissionPromptParentalRestriction);
 }
 
 class _ARViewState extends State<ARView> {
@@ -181,18 +197,18 @@ class _ARViewState extends State<ARView> {
     initCameraPermission();
   }
 
-  initCameraPermission() async {
+  Future<void> initCameraPermission() async {
     requestCameraPermission();
   }
 
-  requestCameraPermission() async {
+  Future<void> requestCameraPermission() async {
     final cameraPermission = await Permission.camera.request();
     setState(() {
       _cameraPermission = cameraPermission;
     });
   }
 
-  requestCameraPermissionFromSettings() async {
+  Future<void> requestCameraPermissionFromSettings() async {
     final cameraPermission = await Permission.camera.request();
     if (cameraPermission == PermissionStatus.permanentlyDenied) {
       openAppSettings();
@@ -215,7 +231,8 @@ class _ARViewState extends State<ARView> {
                 child: PlatformARView(Theme.of(context).platform).build(
                     context: context,
                     arViewCreatedCallback: widget.onARViewCreated,
-                    planeDetectionConfig: widget.planeDetectionConfig)),
+                    planeDetectionConfig: widget.planeDetectionConfig,
+                    geospatialMode: widget.geospatialMode)),
           ]);
         }
       case (PermissionStatus.denied):
@@ -250,7 +267,7 @@ class _ARViewState extends State<ARView> {
           return Center(child: Text(permissionPromptParentalRestriction));
         }
       default:
-        return Text('something went wrong');
+        return const Text('something went wrong');
     }
   }
 }

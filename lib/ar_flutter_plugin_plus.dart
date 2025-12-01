@@ -6,7 +6,7 @@ import 'package:flutter/services.dart';
 
 class ArFlutterPluginPlus {
   static const MethodChannel _channel =
-      const MethodChannel('ar_flutter_plugin_plus');
+      MethodChannel('ar_flutter_plugin_plus');
 
   /// Private constructor to prevent accidental instantiation of the Plugin using the implicit default constructor
   ArFlutterPluginPlus._();

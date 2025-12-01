@@ -5,7 +5,7 @@ import ARKit
 import Combine
 import ARCoreCloudAnchors
 
-class IosARView: NSObject, FlutterPlatformView, ARSCNViewDelegate, UIGestureRecognizerDelegate, ARSessionDelegate {
+class IosARView: NSObject, FlutterPlatformView, ARSCNViewDelegate, UIGestureRecognizerDelegate, ARSessionDelegate, GARSessionDelegate {
     let sceneView: ARSCNView
     let coachingView: ARCoachingOverlayView
     let sessionManagerChannel: FlutterMethodChannel
@@ -22,6 +22,7 @@ class IosARView: NSObject, FlutterPlatformView, ARSCNViewDelegate, UIGestureReco
     private var cloudAnchorHandler: CloudAnchorHandler? = nil
     private var arcoreSession: GARSession? = nil
     private var arcoreMode: Bool = false
+    private var geospatialMode: Bool = false
     private var configuration: ARWorldTrackingConfiguration!
     private var tappedPlaneAnchorAlignment = ARPlaneAnchor.Alignment.horizontal // default alignment
     
@@ -104,6 +105,32 @@ class IosARView: NSObject, FlutterPlatformView, ARSCNViewDelegate, UIGestureReco
                 } else {
                     result(nil)
                 }
+            case "checkVPSAvailability":
+                if let latitude = arguments?["latitude"] as? Double, let longitude = arguments?["longitude"] as? Double {
+                    arcoreSession?.checkVPSAvailability(coordinate: CLLocationCoordinate2D(latitude: latitude, longitude: longitude)) { availability in
+                        switch availability {
+                        case .available:
+                            result("AVAILABLE")
+                        case .unavailable:
+                            result("UNAVAILABLE")
+                        case .errorInternal:
+                            result("ERROR_INTERNAL")
+                        case .errorNetworkConnection:
+                            result("ERROR_NETWORK_CONNECTION")
+                        case .errorNotAuthorized:
+                            result("ERROR_NOT_AUTHORIZED")
+                        case .errorResourceExhausted:
+                            result("ERROR_RESOURCE_EXHAUSTED")
+                        case .unknown:
+                            result("UNKNOWN")
+                        @unknown default:
+                            result("UNKNOWN")
+                        }
+                    }
+                } else {
+                    result(FlutterError(code: "INVALID_ARGUMENTS", message: "Latitude and longitude are required", details: nil))
+                }
+                break
             case "dispose":
                 onDispose(result)
                 result(nil)
@@ -312,10 +339,7 @@ class IosARView: NSObject, FlutterPlatformView, ARSCNViewDelegate, UIGestureReco
             if configShowAnimatedGuide {
                 if self.sceneView.superview != nil && self.coachingView.superview == nil {
                     self.sceneView.addSubview(self.coachingView)
-        //            self.coachingView.translatesAutoresizingMaskIntoConstraints = false
-                    self.coachingView.autoresizingMask = [
-                          .flexibleWidth, .flexibleHeight
-                        ]
+                    self.coachingView.translatesAutoresizingMaskIntoConstraints = false
                     self.coachingView.session = self.sceneView.session
                     self.coachingView.activatesAutomatically = true
                     if configuration.planeDetection == .horizontal {
@@ -323,16 +347,13 @@ class IosARView: NSObject, FlutterPlatformView, ARSCNViewDelegate, UIGestureReco
                     }else{
                         self.coachingView.goal = .verticalPlane
                     }
-                    // TODO: look into constraints issue. This causes a crash:
-                    /**
-                     Terminating app due to uncaught exception 'NSGenericException', reason: 'Unable to activate constraint with anchors <NSLayoutXAxisAnchor:0x28342dec0 "ARCoachingOverlayView:0x13a470ae0.centerX"> and <NSLayoutXAxisAnchor:0x28342c680 "FlutterTouchInterceptingView:0x10bad1c90.centerX"> because they have no common ancestor.  Does the constraint or its anchors reference items in different view hierarchies?  That's illegal.'
-                     */
-        //            NSLayoutConstraint.activate([
-        //                self.coachingView.centerXAnchor.constraint(equalTo: self.sceneView.superview!.centerXAnchor),
-        //                self.coachingView.centerYAnchor.constraint(equalTo: self.sceneView.superview!.centerYAnchor),
-        //                self.coachingView.widthAnchor.constraint(equalTo: self.sceneView.superview!.widthAnchor),
-        //                self.coachingView.heightAnchor.constraint(equalTo: self.sceneView.superview!.heightAnchor)
-        //                ])
+                    
+                    NSLayoutConstraint.activate([
+                        self.coachingView.centerXAnchor.constraint(equalTo: self.sceneView.centerXAnchor),
+                        self.coachingView.centerYAnchor.constraint(equalTo: self.sceneView.centerYAnchor),
+                        self.coachingView.widthAnchor.constraint(equalTo: self.sceneView.widthAnchor),
+                        self.coachingView.heightAnchor.constraint(equalTo: self.sceneView.heightAnchor)
+                        ])
                 }
             }
         }
@@ -340,6 +361,26 @@ class IosARView: NSObject, FlutterPlatformView, ARSCNViewDelegate, UIGestureReco
         // Configure image tracking
         if let trackingImagePaths = arguments["trackingImagePaths"] as? [String] {
             setupImageTracking(imagePaths: trackingImagePaths)
+        }
+
+        if let configGeospatialMode = arguments["geospatialMode"] as? Bool {
+            geospatialMode = configGeospatialMode
+            if geospatialMode {
+                do {
+                    arcoreSession = try GARSession.session()
+                    let config = GARSessionConfiguration()
+                    config.geospatialMode = .enabled
+                    var error: NSError?
+                    arcoreSession?.setConfiguration(config, error: &error)
+                    if let error = error {
+                        print("Failed to configure GARSession: \(error)")
+                    }
+                    arcoreMode = true
+                    arcoreSession?.delegate = self // Make sure IosARView conforms to GARSessionDelegate if not already
+                } catch {
+                    print("Failed to create GARSession")
+                }
+            }
         }
     
         // Update session configuration

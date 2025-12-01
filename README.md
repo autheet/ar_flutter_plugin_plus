@@ -88,6 +88,28 @@ To try out the plugin, it is best to have a look at one of the following example
 | Cloud Anchors                  | AR Scene in which objects can be placed, uploaded and downloaded, thus creating an interactive AR experience that can be shared between multiple devices. Currently, the example allows to upload the last placed object along with its anchor and download all anchors within a radius of 100m along with all the attached objects (independent of which device originally placed the objects). As sharing the objects is done by using the Google Cloud Anchor Service and Firebase, this requires some additional setup, please read [Getting Started with cloud anchors](cloudAnchorSetup.md)        | [Cloud Anchors Code](https://github.com/FranzGraaf/ar_flutter_plugin_plus/blob/main/example/lib/examples/cloudanchorexample.dart)                         |
 | External Object Management     | Similar to the Cloud Anchors example, but contains UI to choose between different models. Rather than being hard-coded, an external database (Firestore) is used to manage the available models. As sharing the objects is done by using the Google Cloud Anchor Service and Firebase, this requires some additional setup, please read [Getting Started with cloud anchors](cloudAnchorSetup.md). Also make sure that in your Firestore database, the collection "models" contains some entries with the fields "name", "image", and "uri", where "uri" points to the raw file of a model in GLB format | [External Model Management Code](https://github.com/FranzGraaf/ar_flutter_plugin_plus/blob/main/example/lib/examples/externalmodelmanagementexample.dart) |
 | Image Tracking                 | The developer can provide a list of images that are recognized when they appear in the camera image of the AR scene. The position and rotation of the image is recognized and can be used to place 3D objects in the scene.                                                                                                                                                                                                                                                                                                                                                                              | [Image Tracking Code](https://github.com/FranzGraaf/ar_flutter_plugin_plus/blob/main/example/lib/examples/image_marker_tracking.dart)                     |
+| Geospatial API                 | Check VPS availability and place geospatial anchors (Terrain and Rooftop) using the ARCore Geospatial API.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               | [Geospatial API Code](https://github.com/FranzGraaf/ar_flutter_plugin_plus/blob/main/example/lib/examples/geospatialexample.dart)                         |
+
+## ARCore Geospatial API Support
+
+This plugin now supports the ARCore Geospatial API on both Android and iOS.
+
+### Implemented Features
+- **VPS Availability Check:** Check if the Visual Positioning System (VPS) is available at a specific location.
+- **Terrain Anchors:** Create anchors on the terrain at a specific latitude, longitude, and altitude.
+- **Rooftop Anchors:** Create anchors on rooftops at a specific latitude, longitude, and altitude.
+- **Geospatial State Updates:** Receive real-time updates on Earth state, tracking state, and camera geospatial pose (latitude, longitude, altitude, heading).
+
+### Missing / Planned Features
+The following features of the ARCore Geospatial API are **not yet implemented**:
+- **Streetscape Geometry:** Access to 3D geometry of buildings and terrain in the vicinity.
+- **Geospatial Depth:** Integration of geospatial data with the depth API for improved occlusion.
+- **Detailed Orientation Accuracy:** While heading is provided, full orientation accuracy details (yaw/pitch/roll accuracy) are not yet fully exposed.
+- **Anchor Resolving via URL:** Creating anchors from Earth/Maps URLs.
+
+### Platform Support
+- **Android:** Fully supported via ARCore SDK.
+- **iOS:** Supported via `GARSession` (ARCore for iOS). Requires a valid API Key configured in `Info.plist`.
 
 ## Contributing
 

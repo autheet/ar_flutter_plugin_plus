@@ -11,6 +11,8 @@ import 'package:vector_math/vector_math_64.dart';
 typedef ARHitResultHandler = void Function(List<ARHitTestResult> hits);
 typedef ARImageDetectionResultHandler = void Function(
     String imageName, Matrix4 transformation);
+typedef ARGeospatialStateUpdatedHandler = void Function(
+    String earthState, String trackingState, Map<String, dynamic> pose);
 
 /// Manages the session configuration, parameters and events of an [ARView]
 class ARSessionManager {
@@ -32,6 +34,9 @@ class ARSessionManager {
   /// Receives detection results when tracked images are detected
   ARImageDetectionResultHandler? onImageDetected;
 
+  /// Receives geospatial state updates
+  ARGeospatialStateUpdatedHandler? onGeospatialStateUpdated;
+
   ARSessionManager(int id, this.buildContext, this.planeDetectionConfig,
       {this.debug = false}) {
     _channel = MethodChannel('arsession_$id');
@@ -46,9 +51,9 @@ class ARSessionManager {
     try {
       final serializedCameraPose =
           await _channel.invokeMethod<List<dynamic>>('getCameraPose', {});
-      return MatrixConverter().fromJson(serializedCameraPose!);
+      return const MatrixConverter().fromJson(serializedCameraPose!);
     } catch (e) {
-      print('Error caught: ' + e.toString());
+      print('Error caught: $e');
       return null;
     }
   }
@@ -63,9 +68,9 @@ class ARSessionManager {
           await _channel.invokeMethod<List<dynamic>>('getAnchorPose', {
         "anchorId": anchor.name,
       });
-      return MatrixConverter().fromJson(serializedCameraPose!);
+      return const MatrixConverter().fromJson(serializedCameraPose!);
     } catch (e) {
-      print('Error caught: ' + e.toString());
+      print('Error caught: $e');
       return null;
     }
   }
@@ -94,6 +99,23 @@ class ARSessionManager {
       return getDistanceBetweenVectors(anchorTranslation, cameraTranslation);
     } else {
       return null;
+    }
+  }
+
+  /// Checks the availability of the Visual Positioning System (VPS) at the given location.
+  /// Returns a [Future] that completes with the availability status (e.g., "AVAILABLE", "UNAVAILABLE", "ERROR").
+  Future<String?> checkVPSAvailability(
+      double latitude, double longitude) async {
+    try {
+      final availability =
+          await _channel.invokeMethod<String>('checkVPSAvailability', {
+        'latitude': latitude,
+        'longitude': longitude,
+      });
+      return availability;
+    } catch (e) {
+      print('Error checking VPS availability: $e');
+      return "ERROR";
     }
   }
 
@@ -130,9 +152,18 @@ class ARSessionManager {
           if (onImageDetected != null) {
             final arguments = call.arguments as Map<dynamic, dynamic>;
             final imageName = arguments['imageName'] as String;
-            final transformation = MatrixConverter()
+            final transformation = const MatrixConverter()
                 .fromJson(arguments['transformation'] as List<dynamic>);
             onImageDetected!(imageName, transformation);
+          }
+          break;
+        case 'onGeospatialStateUpdated':
+          if (onGeospatialStateUpdated != null) {
+            final arguments = call.arguments as Map<dynamic, dynamic>;
+            final earthState = arguments['earthState'] as String;
+            final trackingState = arguments['trackingState'] as String;
+            final pose = Map<String, dynamic>.from(arguments['pose'] as Map);
+            onGeospatialStateUpdated!(earthState, trackingState, pose);
           }
           break;
         case 'dispose':
@@ -144,7 +175,7 @@ class ARSessionManager {
           }
       }
     } catch (e) {
-      print('Error caught: ' + e.toString());
+      print('Error caught: $e');
     }
     return Future.value();
   }
@@ -152,7 +183,7 @@ class ARSessionManager {
   /// Function to initialize the platform-specific AR view. Can be used to initially set or update session settings.
   /// [customPlaneTexturePath] refers to flutter assets from the app that is calling this function, NOT to assets within this plugin. Make sure
   /// the assets are correctly registered in the pubspec.yaml of the parent app (e.g. the ./example app in this plugin's repo)
-  onInitialize({
+  void onInitialize({
     bool showAnimatedGuide = true,
     bool showFeaturePoints = false,
     bool showPlanes = true,
@@ -178,7 +209,7 @@ class ARSessionManager {
   }
 
   /// Displays the [errorMessage] in a snackbar of the parent widget
-  onError(String errorMessage) {
+  void onError(String errorMessage) {
     ScaffoldMessenger.of(buildContext).showSnackBar(SnackBar(
         content: Text(errorMessage),
         action: SnackBarAction(
@@ -189,7 +220,7 @@ class ARSessionManager {
 
   /// Dispose the AR view on the platforms to pause the scenes and disconnect the platform handlers.
   /// You should call this before removing the AR view to prevent out of memory erros
-  dispose() async {
+  Future<void> dispose() async {
     try {
       await _channel.invokeMethod<void>("dispose");
     } catch (e) {

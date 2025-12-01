@@ -11,7 +11,7 @@ import 'package:flutter/material.dart';
 import 'package:vector_math/vector_math_64.dart';
 
 class ImageMarkerTracking extends StatefulWidget {
-  const ImageMarkerTracking({Key? key}) : super(key: key);
+  const ImageMarkerTracking({super.key});
 
   @override
   State<ImageMarkerTracking> createState() => _ImageMarkerTrackingState();

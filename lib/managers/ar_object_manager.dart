@@ -72,7 +72,7 @@ class ARObjectManager {
           if (onPanEnd != null) {
             final tappedNodeName = call.arguments["name"] as String;
             final transform =
-                MatrixConverter().fromJson(call.arguments['transform'] as List);
+                const MatrixConverter().fromJson(call.arguments['transform'] as List);
 
             // Notify callback
             onPanEnd!(tappedNodeName, transform);
@@ -94,7 +94,7 @@ class ARObjectManager {
           if (onRotationEnd != null) {
             final tappedNodeName = call.arguments["name"] as String;
             final transform =
-                MatrixConverter().fromJson(call.arguments['transform'] as List);
+                const MatrixConverter().fromJson(call.arguments['transform'] as List);
 
             // Notify callback
             onRotationEnd!(tappedNodeName, transform);
@@ -106,13 +106,13 @@ class ARObjectManager {
           }
       }
     } catch (e) {
-      print('Error caught: ' + e.toString());
+      print('Error caught: $e');
     }
     return Future.value();
   }
 
   /// Sets up the AR Object Manager
-  onInitialize() {
+  void onInitialize() {
     _channel.invokeMethod<void>('init', {});
   }
 
@@ -123,7 +123,7 @@ class ARObjectManager {
         _channel.invokeMethod<void>('transformationChanged', {
           'name': node.name,
           'transformation':
-              MatrixValueNotifierConverter().toJson(node.transformNotifier)
+              const MatrixValueNotifierConverter().toJson(node.transformNotifier)
         });
       });
       if (planeAnchor != null) {
@@ -139,7 +139,7 @@ class ARObjectManager {
   }
 
   /// Remove given node from the AR Scene
-  removeNode(ARNode node) {
+  void removeNode(ARNode node) {
     _channel.invokeMethod<String>('removeNode', {'name': node.name});
   }
 }
