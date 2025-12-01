@@ -10,12 +10,29 @@ import SwiftJWT
 
 class JWTGenerator {
     
-    func generateWebToken() -> String? {
-        if let path = Bundle.main.path(forResource: "cloudAnchorKey", ofType: "json") {
-            do {
-              let data = try Data(contentsOf: URL(fileURLWithPath: path), options: .mappedIfSafe)
-              let jsonResult = try JSONSerialization.jsonObject(with: data, options: .mutableLeaves)
-              if let jsonResult = jsonResult as? Dictionary<String, AnyObject>,
+    func generateWebToken(keyJson: String? = nil) -> String? {
+        var jsonResult: Dictionary<String, AnyObject>? = nil
+        
+        if let keyJson = keyJson, let data = keyJson.data(using: .utf8) {
+             do {
+                 jsonResult = try JSONSerialization.jsonObject(with: data, options: .mutableLeaves) as? Dictionary<String, AnyObject>
+             } catch {
+                 print("Error parsing injected key JSON")
+             }
+        }
+        
+        if jsonResult == nil {
+            if let path = Bundle.main.path(forResource: "cloudAnchorKey", ofType: "json") {
+              do {
+                let data = try Data(contentsOf: URL(fileURLWithPath: path), options: .mappedIfSafe)
+                jsonResult = try JSONSerialization.jsonObject(with: data, options: .mutableLeaves) as? Dictionary<String, AnyObject>
+              } catch {
+                   print("Error reading cloudAnchorKey.json")
+              }
+            }
+        }
+        
+        if let jsonResult = jsonResult,
                  let type = jsonResult["type"] as? String,
                  let projectId = jsonResult["project_id"] as? String,
                  let privateKeyId = jsonResult["private_key_id"] as? String,
@@ -51,7 +68,7 @@ class JWTGenerator {
               } catch {
                    print("Error generating JWT")
               }
-        }
+        
         return nil
     }
     

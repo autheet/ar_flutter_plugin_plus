@@ -24,7 +24,9 @@ class IosARView: NSObject, FlutterPlatformView, ARSCNViewDelegate, UIGestureReco
     private var arcoreMode: Bool = false
     private var geospatialMode: Bool = false
     private var configuration: ARWorldTrackingConfiguration!
+
     private var tappedPlaneAnchorAlignment = ARPlaneAnchor.Alignment.horizontal // default alignment
+    private var serviceAccountKeyJson: String? = nil // Store injected key
     
     private var panStartLocation: CGPoint?
     private var panCurrentLocation: CGPoint?
@@ -135,6 +137,13 @@ class IosARView: NSObject, FlutterPlatformView, ARSCNViewDelegate, UIGestureReco
                 onDispose(result)
                 result(nil)
                 break
+            case "setServiceAccountKey":
+                if let keyJson = arguments?["keyJson"] as? String {
+                    self.serviceAccountKeyJson = keyJson
+                    print("iOS: Service Account Key set.")
+                }
+                result(nil)
+                break
             default:
                 result(FlutterMethodNotImplemented)
                 break
@@ -215,7 +224,7 @@ class IosARView: NSObject, FlutterPlatformView, ARSCNViewDelegate, UIGestureReco
                     let configuration = GARSessionConfiguration();
                     configuration.cloudAnchorMode = .enabled;
                     arcoreSession?.setConfiguration(configuration, error: nil);
-                    if let token = JWTGenerator().generateWebToken(){
+                    if let token = JWTGenerator().generateWebToken(keyJson: self.serviceAccountKeyJson){
                         arcoreSession!.setAuthToken(token)
                         
                         cloudAnchorHandler = CloudAnchorHandler(session: arcoreSession!)

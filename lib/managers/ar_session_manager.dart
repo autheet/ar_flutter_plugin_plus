@@ -233,4 +233,15 @@ class ARSessionManager {
     final result = await _channel.invokeMethod<Uint8List>('snapshot');
     return MemoryImage(result!);
   }
+
+  /// Sets the Service Account Key (JSON string) for ARCore authentication (iOS only)
+  Future<void> setServiceAccountKey(String keyJson) async {
+    try {
+      await _channel.invokeMethod<void>('setServiceAccountKey', {
+        'keyJson': keyJson,
+      });
+    } catch (e) {
+      print('Error setting Service Account Key: $e');
+    }
+  }
 }
