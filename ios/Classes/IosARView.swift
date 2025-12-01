@@ -3,7 +3,9 @@ import UIKit
 import Foundation
 import ARKit
 import Combine
+import ARCoreGeospatial
 import ARCoreCloudAnchors
+
 
 class IosARView: NSObject, FlutterPlatformView, ARSCNViewDelegate, UIGestureRecognizerDelegate, ARSessionDelegate, GARSessionDelegate {
     let sceneView: ARSCNView
@@ -74,7 +76,7 @@ class IosARView: NSObject, FlutterPlatformView, ARSCNViewDelegate, UIGestureReco
                 result(nil)
             }
 
-    func onSessionMethodCalled(_ call :FlutterMethodCall, _ result:FlutterResult) {
+    func onSessionMethodCalled(_ call :FlutterMethodCall, _ result: @escaping FlutterResult) {
         let arguments = call.arguments as? Dictionary<String, Any>
 
         switch call.method {
