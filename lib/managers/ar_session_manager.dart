@@ -208,6 +208,13 @@ class ARSessionManager {
     });
   }
 
+  /// Sets the auth token for the AR session (Geospatial API, Cloud Anchors)
+  void setAuthToken(String token) {
+    _channel.invokeMethod<void>('setAuthToken', {
+      'authToken': token,
+    });
+  }
+
   /// Displays the [errorMessage] in a snackbar of the parent widget
   void onError(String errorMessage) {
     ScaffoldMessenger.of(buildContext).showSnackBar(SnackBar(

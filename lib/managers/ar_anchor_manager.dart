@@ -32,8 +32,10 @@ class ARAnchorManager {
   }
 
   /// Activates collaborative AR mode (using Google Cloud Anchors)
-  Future<void> initGoogleCloudAnchorMode() async {
-    _channel.invokeMethod<bool>('initGoogleCloudAnchorMode', {});
+  Future<void> initGoogleCloudAnchorMode({String? authToken}) async {
+    _channel.invokeMethod<bool>('initGoogleCloudAnchorMode', {
+      'authToken': authToken,
+    });
   }
 
   Future<dynamic> _platformCallHandler(MethodCall call) async {

@@ -61,7 +61,10 @@ internal class AndroidARView(
         creationParams: Map<String?, Any?>?
 ) : PlatformView {
     // constants
-    private val TAG: String = AndroidARView::class.java.name
+    private var keepNodeSelected: Boolean = true
+    private var authToken: String? = null
+
+    private val TAG: String = AndroidARView::class.java.simpleName
     // Lifecycle variables
     private var mUserRequestedInstall = true
     lateinit var activityLifecycleCallbacks: Application.ActivityLifecycleCallbacks
@@ -81,7 +84,7 @@ internal class AndroidARView(
     // Setting defaults
     private var enableRotation = false
     private var enablePans = false
-    private var keepNodeSelected = true;
+    // private var keepNodeSelected = true; // Removed duplicate
     private var footprintSelectionVisualizer = FootprintSelectionVisualizer()
     // Geospatial
     private var geospatialMode = false
@@ -159,6 +162,14 @@ internal class AndroidARView(
                                 }
                                 handlerThread.quitSafely();
                             }, Handler(handlerThread.looper));
+                        }
+                        "setAuthToken" -> {
+                            val token = call.argument<String>("authToken")
+                            if (token != null) {
+                                this@AndroidARView.authToken = token
+                                // arSceneView.session?.setAuthToken(token)
+                            }
+                            result.success(null)
                         }
                         "dispose" -> {
                             dispose()
@@ -307,6 +318,18 @@ internal class AndroidARView(
                                 config.updateMode = Config.UpdateMode.LATEST_CAMERA_IMAGE
                                 config.focusMode = Config.FocusMode.AUTO
                                 arSceneView.session?.configure(config)
+
+                                val authTokenArg = call.argument<String>("authToken")
+                                if (authTokenArg != null) {
+                                    this@AndroidARView.authToken = authTokenArg
+                                    // arSceneView.session?.setAuthToken(authTokenArg)
+                                    Log.d(TAG, "Auth token set for ARCore session")
+                                } else if (this@AndroidARView.authToken != null) {
+                                    // arSceneView.session?.setAuthToken(this@AndroidARView.authToken!!)
+                                    Log.d(TAG, "Auth token set for ARCore session from stored token")
+                                } else {
+                                    Log.w(TAG, "Auth token missing for Cloud Anchor Mode")
+                                }
 
                                 cloudAnchorHandler = CloudAnchorHandler(arSceneView.session!!)
                             } else {
@@ -458,6 +481,11 @@ internal class AndroidARView(
                     }
                     session.configure(config)
                     arSceneView.setupSession(session)
+                    
+                    if (this.authToken != null) {
+                        // session.setAuthToken(this.authToken!!)
+                        Log.d(TAG, "Auth token set for ARCore session in onResume")
+                    }
                 }
 
                 //TODO: implement the generation of the image database

@@ -25,6 +25,7 @@ class IosARView: NSObject, FlutterPlatformView, ARSCNViewDelegate, UIGestureReco
     private var geospatialMode: Bool = false
     private var configuration: ARWorldTrackingConfiguration!
     private var tappedPlaneAnchorAlignment = ARPlaneAnchor.Alignment.horizontal // default alignment
+    private var authToken: String? = nil
     
     private var panStartLocation: CGPoint?
     private var panCurrentLocation: CGPoint?
@@ -131,6 +132,15 @@ class IosARView: NSObject, FlutterPlatformView, ARSCNViewDelegate, UIGestureReco
                     result(FlutterError(code: "INVALID_ARGUMENTS", message: "Latitude and longitude are required", details: nil))
                 }
                 break
+            case "setAuthToken":
+                if let token = arguments?["authToken"] as? String {
+                    self.authToken = token
+                    if let session = self.arcoreSession {
+                        session.setAuthToken(token)
+                    }
+                }
+                result(nil)
+                break
             case "dispose":
                 onDispose(result)
                 result(nil)
@@ -209,23 +219,33 @@ class IosARView: NSObject, FlutterPlatformView, ARSCNViewDelegate, UIGestureReco
                 }
                 break
             case "initGoogleCloudAnchorMode":
-                arcoreSession = try! GARSession.session()
+                if arcoreSession == nil {
+                    arcoreSession = try! GARSession.session()
+                }
 
                 if (arcoreSession != nil){
                     let configuration = GARSessionConfiguration();
                     configuration.cloudAnchorMode = .enabled;
-                    arcoreSession?.setConfiguration(configuration, error: nil);
-                    if let token = JWTGenerator().generateWebToken(){
-                        arcoreSession!.setAuthToken(token)
-                        
-                        cloudAnchorHandler = CloudAnchorHandler(session: arcoreSession!)
-                        arcoreSession!.delegate = cloudAnchorHandler
-                        arcoreSession!.delegateQueue = DispatchQueue.main
-                        
-                        arcoreMode = true
-                    } else {
-                        sessionManagerChannel.invokeMethod("onError", arguments: ["Error generating JWT, have you added cloudAnchorKey.json into the example/ios/Runner directory?"])
+                    // Preserve geospatial mode if enabled
+                    if geospatialMode {
+                        configuration.geospatialMode = .enabled
                     }
+                    arcoreSession?.setConfiguration(configuration, error: nil);
+                    
+                    if let token = arguments?["authToken"] as? String {
+                         self.authToken = token
+                         arcoreSession!.setAuthToken(token)
+                    } else if let token = self.authToken {
+                         arcoreSession!.setAuthToken(token)
+                    } else {
+                         sessionManagerChannel.invokeMethod("onError", arguments: ["Auth token missing for Google Cloud Anchor Mode"])
+                    }
+                    
+                    cloudAnchorHandler = CloudAnchorHandler(session: arcoreSession!)
+                    arcoreSession!.delegate = cloudAnchorHandler
+                    arcoreSession!.delegateQueue = DispatchQueue.main
+                    
+                    arcoreMode = true
                 } else {
                     sessionManagerChannel.invokeMethod("onError", arguments: ["Error initializing Google AR Session"])
                 }
@@ -374,6 +394,9 @@ class IosARView: NSObject, FlutterPlatformView, ARSCNViewDelegate, UIGestureReco
                     arcoreSession?.setConfiguration(config, error: &error)
                     if let error = error {
                         print("Failed to configure GARSession: \(error)")
+                    }
+                    if let token = self.authToken {
+                        arcoreSession?.setAuthToken(token)
                     }
                     arcoreMode = true
                     arcoreSession?.delegate = self // Make sure IosARView conforms to GARSessionDelegate if not already
