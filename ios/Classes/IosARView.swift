@@ -3,7 +3,9 @@ import UIKit
 import Foundation
 import ARKit
 import Combine
+import ARCoreGeospatial
 import ARCoreCloudAnchors
+
 
 class IosARView: NSObject, FlutterPlatformView, ARSCNViewDelegate, UIGestureRecognizerDelegate, ARSessionDelegate, GARSessionDelegate {
     let sceneView: ARSCNView
@@ -25,6 +27,7 @@ class IosARView: NSObject, FlutterPlatformView, ARSCNViewDelegate, UIGestureReco
     private var geospatialMode: Bool = false
     private var configuration: ARWorldTrackingConfiguration!
     private var tappedPlaneAnchorAlignment = ARPlaneAnchor.Alignment.horizontal // default alignment
+    private var authToken: String? = nil
     
     private var panStartLocation: CGPoint?
     private var panCurrentLocation: CGPoint?
@@ -73,7 +76,7 @@ class IosARView: NSObject, FlutterPlatformView, ARSCNViewDelegate, UIGestureReco
                 result(nil)
             }
 
-    func onSessionMethodCalled(_ call :FlutterMethodCall, _ result:FlutterResult) {
+    func onSessionMethodCalled(_ call :FlutterMethodCall, _ result: @escaping FlutterResult) {
         let arguments = call.arguments as? Dictionary<String, Any>
 
         switch call.method {
@@ -130,6 +133,15 @@ class IosARView: NSObject, FlutterPlatformView, ARSCNViewDelegate, UIGestureReco
                 } else {
                     result(FlutterError(code: "INVALID_ARGUMENTS", message: "Latitude and longitude are required", details: nil))
                 }
+                break
+            case "setAuthToken":
+                if let token = arguments?["authToken"] as? String {
+                    self.authToken = token
+                    if let session = self.arcoreSession {
+                        session.setAuthToken(token)
+                    }
+                }
+                result(nil)
                 break
             case "dispose":
                 onDispose(result)
@@ -203,29 +215,105 @@ class IosARView: NSObject, FlutterPlatformView, ARSCNViewDelegate, UIGestureReco
                 }
                 result(nil)
                 break
+            case "addTerrainAnchor":
+                if let latitude = arguments?["latitude"] as? Double,
+                   let longitude = arguments?["longitude"] as? Double,
+                   let altitude = arguments?["altitude"] as? Double,
+                   let session = self.arcoreSession {
+                    
+                    let coordinate = CLLocationCoordinate2D(latitude: latitude, longitude: longitude)
+                    // Use identity rotation for the anchor (East-Up-South quaternion)
+                    let eusQuaternion = GARQuaternion(x: 0, y: 0, z: 0, w: 1)
+                    
+                    do {
+                        try session.createAnchorOnTerrain(coordinate: coordinate, altitudeAboveTerrain: altitude, eastUpSouthQAnchor: eusQuaternion) { anchor, error in
+                            if let error = error {
+                                print("Failed to create terrain anchor: \(error)")
+                                result(false)
+                            } else if let anchor = anchor {
+                                let arAnchor = ARAnchor(transform: anchor.transform)
+                                let name = "terrainAnchor_\(Int(Date().timeIntervalSince1970 * 1000))"
+                                self.anchorCollection[name] = arAnchor
+                                self.sceneView.session.add(anchor: arAnchor)
+                                result(true)
+                            } else {
+                                result(false)
+                            }
+                        }
+                    } catch {
+                        print("Exception creating terrain anchor: \(error)")
+                        result(false)
+                    }
+                } else {
+                    result(false)
+                }
+                break
+            case "addRooftopAnchor":
+                if let latitude = arguments?["latitude"] as? Double,
+                   let longitude = arguments?["longitude"] as? Double,
+                   let altitude = arguments?["altitude"] as? Double,
+                   let session = self.arcoreSession {
+                    
+                    let coordinate = CLLocationCoordinate2D(latitude: latitude, longitude: longitude)
+                    // Use identity rotation for the anchor (East-Up-South quaternion)
+                    let eusQuaternion = GARQuaternion(x: 0, y: 0, z: 0, w: 1)
+                    
+                    do {
+                        try session.createAnchorOnRooftop(coordinate: coordinate, altitudeAboveRooftop: altitude, eastUpSouthQAnchor: eusQuaternion) { anchor, error in
+                            if let error = error {
+                                print("Failed to create rooftop anchor: \(error)")
+                                result(false)
+                            } else if let anchor = anchor {
+                                let arAnchor = ARAnchor(transform: anchor.transform)
+                                let name = "rooftopAnchor_\(Int(Date().timeIntervalSince1970 * 1000))"
+                                self.anchorCollection[name] = arAnchor
+                                self.sceneView.session.add(anchor: arAnchor)
+                                result(true)
+                            } else {
+                                result(false)
+                            }
+                        }
+                    } catch {
+                        print("Exception creating rooftop anchor: \(error)")
+                        result(false)
+                    }
+                } else {
+                    result(false)
+                }
+                break
             case "removeAnchor":
                 if let name = arguments!["name"] as? String {
                     deleteAnchor(anchorName: name)
                 }
                 break
             case "initGoogleCloudAnchorMode":
-                arcoreSession = try! GARSession.session()
+                if arcoreSession == nil {
+                    arcoreSession = try! GARSession.session()
+                }
 
                 if (arcoreSession != nil){
                     let configuration = GARSessionConfiguration();
                     configuration.cloudAnchorMode = .enabled;
-                    arcoreSession?.setConfiguration(configuration, error: nil);
-                    if let token = JWTGenerator().generateWebToken(){
-                        arcoreSession!.setAuthToken(token)
-                        
-                        cloudAnchorHandler = CloudAnchorHandler(session: arcoreSession!)
-                        arcoreSession!.delegate = cloudAnchorHandler
-                        arcoreSession!.delegateQueue = DispatchQueue.main
-                        
-                        arcoreMode = true
-                    } else {
-                        sessionManagerChannel.invokeMethod("onError", arguments: ["Error generating JWT, have you added cloudAnchorKey.json into the example/ios/Runner directory?"])
+                    // Preserve geospatial mode if enabled
+                    if geospatialMode {
+                        configuration.geospatialMode = .enabled
                     }
+                    arcoreSession?.setConfiguration(configuration, error: nil);
+                    
+                    if let token = arguments?["authToken"] as? String {
+                         self.authToken = token
+                         arcoreSession!.setAuthToken(token)
+                    } else if let token = self.authToken {
+                         arcoreSession!.setAuthToken(token)
+                    } else {
+                         sessionManagerChannel.invokeMethod("onError", arguments: ["Auth token missing for Google Cloud Anchor Mode"])
+                    }
+                    
+                    cloudAnchorHandler = CloudAnchorHandler(session: arcoreSession!)
+                    arcoreSession!.delegate = cloudAnchorHandler
+                    arcoreSession!.delegateQueue = DispatchQueue.main
+                    
+                    arcoreMode = true
                 } else {
                     sessionManagerChannel.invokeMethod("onError", arguments: ["Error initializing Google AR Session"])
                 }
@@ -374,6 +462,9 @@ class IosARView: NSObject, FlutterPlatformView, ARSCNViewDelegate, UIGestureReco
                     arcoreSession?.setConfiguration(config, error: &error)
                     if let error = error {
                         print("Failed to configure GARSession: \(error)")
+                    }
+                    if let token = self.authToken {
+                        arcoreSession?.setAuthToken(token)
                     }
                     arcoreMode = true
                     arcoreSession?.delegate = self // Make sure IosARView conforms to GARSessionDelegate if not already
