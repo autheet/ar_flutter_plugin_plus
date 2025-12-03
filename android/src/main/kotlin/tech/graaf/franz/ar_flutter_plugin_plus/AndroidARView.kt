@@ -167,8 +167,13 @@ internal class AndroidARView(
                             val token = call.argument<String>("authToken")
                             if (token != null) {
                                 this@AndroidARView.authToken = token
-                                // arSceneView.session?.setAuthToken(token)
-                            }
+                                try {
+                                    val method = arSceneView.session?.javaClass?.getMethod("setAuthToken", String::class.java)
+                                    method?.invoke(arSceneView.session, token)
+                                } catch (e: Exception) {
+                                    Log.e(TAG, "Failed to invoke setAuthToken", e)
+                                }
+                            } 
                             result.success(null)
                         }
                         "dispose" -> {
@@ -322,11 +327,21 @@ internal class AndroidARView(
                                 val authTokenArg = call.argument<String>("authToken")
                                 if (authTokenArg != null) {
                                     this@AndroidARView.authToken = authTokenArg
-                                    // arSceneView.session?.setAuthToken(authTokenArg)
-                                    Log.d(TAG, "Auth token set for ARCore session")
+                                    try {
+                                        val method = arSceneView.session?.javaClass?.getMethod("setAuthToken", String::class.java)
+                                        method?.invoke(arSceneView.session, authTokenArg)
+                                        Log.d(TAG, "Auth token set for ARCore session via reflection")
+                                    } catch (e: Exception) {
+                                        Log.e(TAG, "Failed to invoke setAuthToken", e)
+                                    }
                                 } else if (this@AndroidARView.authToken != null) {
-                                    // arSceneView.session?.setAuthToken(this@AndroidARView.authToken!!)
-                                    Log.d(TAG, "Auth token set for ARCore session from stored token")
+                                    try {
+                                        val method = arSceneView.session?.javaClass?.getMethod("setAuthToken", String::class.java)
+                                        method?.invoke(arSceneView.session, this@AndroidARView.authToken!!)
+                                        Log.d(TAG, "Auth token set for ARCore session from stored token via reflection")
+                                    } catch (e: Exception) {
+                                        Log.e(TAG, "Failed to invoke setAuthToken", e)
+                                    }
                                 } else {
                                     Log.w(TAG, "Auth token missing for Cloud Anchor Mode")
                                 }
@@ -483,8 +498,13 @@ internal class AndroidARView(
                     arSceneView.setupSession(session)
                     
                     if (this.authToken != null) {
-                        // session.setAuthToken(this.authToken!!)
-                        Log.d(TAG, "Auth token set for ARCore session in onResume")
+                        try {
+                            val method = session.javaClass.getMethod("setAuthToken", String::class.java)
+                            method.invoke(session, this.authToken!!)
+                            Log.d(TAG, "Auth token set for ARCore session in onResume via reflection")
+                        } catch (e: Exception) {
+                            Log.e(TAG, "Failed to invoke setAuthToken", e)
+                        }
                     }
                 }
 

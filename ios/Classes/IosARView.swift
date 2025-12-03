@@ -215,6 +215,72 @@ class IosARView: NSObject, FlutterPlatformView, ARSCNViewDelegate, UIGestureReco
                 }
                 result(nil)
                 break
+            case "addTerrainAnchor":
+                if let latitude = arguments?["latitude"] as? Double,
+                   let longitude = arguments?["longitude"] as? Double,
+                   let altitude = arguments?["altitude"] as? Double,
+                   let session = self.arcoreSession {
+                    
+                    let coordinate = CLLocationCoordinate2D(latitude: latitude, longitude: longitude)
+                    // Use identity rotation for the anchor (East-Up-South quaternion)
+                    let eusQuaternion = GARQuaternion(x: 0, y: 0, z: 0, w: 1)
+                    
+                    do {
+                        try session.createAnchorOnTerrain(coordinate: coordinate, altitudeAboveTerrain: altitude, eastUpSouthQAnchor: eusQuaternion) { anchor, error in
+                            if let error = error {
+                                print("Failed to create terrain anchor: \(error)")
+                                result(false)
+                            } else if let anchor = anchor {
+                                let arAnchor = ARAnchor(transform: anchor.transform)
+                                let name = "terrainAnchor_\(Int(Date().timeIntervalSince1970 * 1000))"
+                                self.anchorCollection[name] = arAnchor
+                                self.sceneView.session.add(anchor: arAnchor)
+                                result(true)
+                            } else {
+                                result(false)
+                            }
+                        }
+                    } catch {
+                        print("Exception creating terrain anchor: \(error)")
+                        result(false)
+                    }
+                } else {
+                    result(false)
+                }
+                break
+            case "addRooftopAnchor":
+                if let latitude = arguments?["latitude"] as? Double,
+                   let longitude = arguments?["longitude"] as? Double,
+                   let altitude = arguments?["altitude"] as? Double,
+                   let session = self.arcoreSession {
+                    
+                    let coordinate = CLLocationCoordinate2D(latitude: latitude, longitude: longitude)
+                    // Use identity rotation for the anchor (East-Up-South quaternion)
+                    let eusQuaternion = GARQuaternion(x: 0, y: 0, z: 0, w: 1)
+                    
+                    do {
+                        try session.createAnchorOnRooftop(coordinate: coordinate, altitudeAboveRooftop: altitude, eastUpSouthQAnchor: eusQuaternion) { anchor, error in
+                            if let error = error {
+                                print("Failed to create rooftop anchor: \(error)")
+                                result(false)
+                            } else if let anchor = anchor {
+                                let arAnchor = ARAnchor(transform: anchor.transform)
+                                let name = "rooftopAnchor_\(Int(Date().timeIntervalSince1970 * 1000))"
+                                self.anchorCollection[name] = arAnchor
+                                self.sceneView.session.add(anchor: arAnchor)
+                                result(true)
+                            } else {
+                                result(false)
+                            }
+                        }
+                    } catch {
+                        print("Exception creating rooftop anchor: \(error)")
+                        result(false)
+                    }
+                } else {
+                    result(false)
+                }
+                break
             case "removeAnchor":
                 if let name = arguments!["name"] as? String {
                     deleteAnchor(anchorName: name)
